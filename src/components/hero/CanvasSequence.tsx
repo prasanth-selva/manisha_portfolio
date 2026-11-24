@@ -66,6 +66,7 @@ export default function CanvasSequence({ settings }: { settings: SiteSettings })
     const ctx = canvas?.getContext("2d", { alpha: false });
     if (!canvas || !ctx) return;
     const frames = framesRef.current;
+    const mobileViewport = window.matchMedia("(max-width: 768px)");
     let lastIndex = -1;
     let raf = 0;
 
@@ -84,7 +85,9 @@ export default function CanvasSequence({ settings }: { settings: SiteSettings })
       }
       ctx.fillStyle = "#030303";
       ctx.fillRect(0, 0, width, height);
-      const scale = Math.min(width / image.naturalWidth, height / image.naturalHeight);
+      const scale = mobileViewport.matches
+        ? Math.min(width / image.naturalWidth, height / image.naturalHeight)
+        : Math.max(width / image.naturalWidth, height / image.naturalHeight);
       const drawWidth = image.naturalWidth * scale;
       const drawHeight = image.naturalHeight * scale;
       ctx.drawImage(image, (width - drawWidth) / 2, (height - drawHeight) / 2, drawWidth, drawHeight);
@@ -119,7 +122,7 @@ export default function CanvasSequence({ settings }: { settings: SiteSettings })
             </div>
           </div>
         )}
-        {failed && <div className="absolute bottom-5 right-5 bg-black/85 px-3 py-2 text-xs text-white/70" role="status">The motion sequence could not load. Use the links to explore the portfolio.</div>}
+        {failed && <div className="hero-copy absolute bottom-5 right-5 px-3 py-2 text-xs text-white/70" role="status">The motion sequence could not load. Use the links to explore the portfolio.</div>}
       </div>
     </section>
   );
