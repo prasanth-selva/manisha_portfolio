@@ -1,0 +1,193 @@
+"use client";
+
+import { useRouter } from "next/navigation";
+import { useRef, useState, useTransition } from "react";
+
+import { saveSettings } from "@/lib/admin-actions";
+import { uploadMediaFile } from "@/lib/media-upload-client";
+
+type Settings = {
+  displayName: string;
+  headline: string;
+  aboutBio: string;
+  institution: string;
+  heroBadge: string;
+  resumeUrl: string | null;
+  aboutPhoto: string | null;
+  email: string;
+  linkedin: string;
+  github: string;
+  phone: string | null;
+  seoTitle: string;
+  seoDescription: string;
+};
+
+export function SettingsForm({ settings }: { settings: Settings }) {
+  const router = useRouter();
+  const [error, setError] = useState<string | null>(null);
+  const [ok, setOk] = useState(false);
+  const [pending, startTransition] = useTransition();
+  const photoRef = useRef<HTMLInputElement | null>(null);
+  const [photoUploading, setPhotoUploading] = useState(false);
+  const [photoUrl, setPhotoUrl] = useState<string | null>(settings.aboutPhoto);
+
+  const onSubmit = (fd: FormData) => {
+    startTransition(async () => {
+      setError(null);
+      setOk(false);
+      const res = await saveSettings(fd);
+      if (!res.ok) {
+        setError(res.error ?? "Save failed");
+        return;
+      }
+      setOk(true);
+      router.refresh();
+    });
+  };
+
+  const onPhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const input = e.currentTarget;
+    const file = e.target.files?.[0];
+    input.value = "";
+    if (!file) return;
+    setPhotoUploading(true);
+    setError(null);
+    try {
+      const result = await uploadMediaFile(file);
+      setPhotoUrl(result.url);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Photo upload failed. Check your connection and try again.");
+    } finally {
+      setPhotoUploading(false);
+    }
+  };
+
+  const inputCls =
+    "w-full rounded-md border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-white/85 outline-none transition-colors focus:border-accent-metal/50";
+
+  return (
+    <form action={onSubmit} className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight text-white/90">Site settings</h1>
+        <p className="mt-1 font-sans text-xs text-white/40">
+          PUBLIC IDENTITY, SOCIALS, SEO DEFAULTS, RESUME
+        </p>
+      </div>
+
+      <div className="surface grid gap-4 rounded-md p-6 sm:grid-cols-2">
+        <div>
+          <label className="mono-label mb-2 block" htmlFor="displayName">Display name</label>
+          <input id="displayName" name="displayName" required maxLength={100} defaultValue={settings.displayName} className={inputCls} />
+        </div>
+        <div>
+          <label className="mono-label mb-2 block" htmlFor="headline">Headline</label>
+          <input id="headline" name="headline" maxLength={180} defaultValue={settings.headline} className={inputCls} />
+        </div>
+        <div className="sm:col-span-2">
+          <label className="mono-label mb-2 block" htmlFor="aboutBio">About biography</label>
+          <textarea id="aboutBio" name="aboutBio" rows={5} maxLength={5000} defaultValue={settings.aboutBio} className={`${inputCls} resize-y`} />
+        </div>
+        <div>
+          <label className="mono-label mb-2 block" htmlFor="institution">College / institution</label>
+          <input id="institution" name="institution" maxLength={160} defaultValue={settings.institution} className={inputCls} />
+        </div>
+        <div className="sm:col-span-2">
+          <label className="mono-label mb-2 block" htmlFor="heroBadge">Hero badge</label>
+          <input id="heroBadge" name="heroBadge" defaultValue={settings.heroBadge} className={inputCls} />
+        </div>
+        <div>
+          <label className="mono-label mb-2 block" htmlFor="email">Email</label>
+          <input id="email" name="email" type="email" maxLength={200} defaultValue={settings.email} className={inputCls} />
+        </div>
+        <div>
+          <label className="mono-label mb-2 block" htmlFor="phone">Phone (optional, hidden if blank)</label>
+          <input id="phone" name="phone" type="tel" defaultValue={settings.phone ?? ""} className={inputCls} />
+        </div>
+        <div>
+          <label className="mono-label mb-2 block" htmlFor="linkedin">LinkedIn URL</label>
+          <input id="linkedin" name="linkedin" defaultValue={settings.linkedin} className={inputCls} />
+        </div>
+        <div>
+          <label className="mono-label mb-2 block" htmlFor="github">GitHub URL</label>
+          <input id="github" name="github" defaultValue={settings.github} className={inputCls} />
+        </div>
+        <div className="sm:col-span-2">
+          <label className="mono-label mb-2 block" htmlFor="resumeUrl">Resume URL (or upload on the Resume page)</label>
+          <input id="resumeUrl" name="resumeUrl" defaultValue={settings.resumeUrl ?? ""} className={`${inputCls} font-sans text-xs`} />
+        </div>
+        <div className="sm:col-span-2">
+          <label className="mono-label mb-2 block" htmlFor="aboutPhoto">About photo URL</label>
+          <input
+            id="aboutPhoto"
+            name="aboutPhoto"
+            type="url"
+            value={photoUrl ?? ""}
+            onChange={(e) => setPhotoUrl(e.target.value)}
+            placeholder="Upload a photo below or paste an image URL"
+            className={`${inputCls} font-sans text-xs`}
+          />
+        </div>
+      </div>
+
+      <div className="surface grid gap-4 rounded-md p-6 sm:grid-cols-2">
+        <div className="sm:col-span-2">
+          <p className="mono-label mb-3">SEO DEFAULTS</p>
+        </div>
+        <div className="sm:col-span-2">
+          <label className="mono-label mb-2 block" htmlFor="seoTitle">Title</label>
+          <input id="seoTitle" name="seoTitle" defaultValue={settings.seoTitle} className={inputCls} />
+        </div>
+        <div className="sm:col-span-2">
+          <label className="mono-label mb-2 block" htmlFor="seoDescription">Description</label>
+          <textarea id="seoDescription" name="seoDescription" rows={3} defaultValue={settings.seoDescription} className={`${inputCls} resize-none`} />
+        </div>
+      </div>
+
+      <div className="surface grid gap-4 rounded-md p-6 sm:grid-cols-2">
+        <div className="sm:col-span-2">
+          <p className="mono-label mb-3">ABOUT PHOTO</p>
+          <input
+            ref={photoRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/avif,image/gif"
+            className="hidden"
+            onChange={onPhotoChange}
+          />
+          <button
+            type="button"
+            onClick={() => photoRef.current?.click()}
+            disabled={photoUploading}
+            className="rounded-md border border-white/15 px-5 py-2.5 font-sans text-xs uppercase tracking-[0.15em] text-white/70 transition-colors hover:border-accent-metal/40 hover:text-accent-metal disabled:opacity-50"
+          >
+            {photoUploading ? "Uploading…" : "Upload photo"}
+          </button>
+          <p className="mt-2 font-sans text-[10px] text-white/35">PNG, JPG, WebP, AVIF or GIF · Max 8 MB</p>
+          {photoUrl && (
+            <p className="mt-3 break-all font-sans text-xs text-accent-metal">
+              {photoUrl} — save settings to publish this as your profile photo.
+            </p>
+          )}
+        </div>
+      </div>
+
+      {error && (
+        <p className="rounded-md border border-red-400/25 bg-red-400/[0.06] px-4 py-3 font-sans text-xs text-red-400" role="alert">
+          {error}
+        </p>
+      )}
+      {ok && (
+        <p className="rounded-md border border-emerald-400/25 bg-emerald-400/[0.06] px-4 py-3 font-sans text-xs text-emerald-300" role="status">
+          ✓ Settings saved — public pages revalidated.
+        </p>
+      )}
+
+      <button
+        type="submit"
+        disabled={pending}
+        className="rounded-md bg-accent-metal px-6 py-2.5 font-sans text-xs font-semibold uppercase tracking-[0.15em] text-black transition-shadow hover:shadow-none disabled:opacity-50"
+      >
+        {pending ? "Saving…" : "Save settings"}
+      </button>
+    </form>
+  );
+}

@@ -1,0 +1,54 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { signOutAdmin } from "@/lib/admin-actions";
+
+const ITEMS = [
+  { href: "/admin", label: "Dashboard" },
+  { href: "/admin/projects", label: "Projects" },
+  { href: "/admin/experience", label: "Experience" },
+  { href: "/admin/certifications", label: "Certifications" },
+  { href: "/admin/achievements", label: "Achievements" },
+  { href: "/admin/skills", label: "Skills" },
+  { href: "/admin/writeups", label: "Writeups" },
+  { href: "/admin/resume", label: "Resume" },
+  { href: "/admin/inbox", label: "Inbox" },
+  { href: "/admin/settings", label: "Settings" },
+];
+
+export default function AdminNav({ unread, compact }: { unread: number; compact?: boolean }) {
+  const pathname = usePathname();
+  return (
+    <nav className={`mt-4 grid gap-1 ${compact ? "" : ""}`} aria-label="Admin">
+      {ITEMS.map((item) => {
+        const p = pathname ?? "";
+        const active =
+          item.href === "/admin" ? p === "/admin" : p.startsWith(item.href);
+        return (
+          <Link
+            key={item.href}
+            href={item.href}
+            className={`flex items-center justify-between rounded-md px-4 py-2 font-sans text-xs uppercase tracking-[0.15em] transition-colors ${
+              active
+                ? "border border-accent-metal/30 bg-accent-metal/[0.07] text-accent-metal"
+                : "text-[#9CA3AF] hover:bg-white/[0.04] hover:text-white/85"
+            }`}
+          >
+            {item.label}
+            {item.href === "/admin/inbox" && unread > 0 && (
+              <span className="rounded-md bg-accent-metal px-2 py-0.5 text-[10px] font-bold text-black">
+                {unread}
+              </span>
+            )}
+          </Link>
+        );
+      })}
+      <form action={signOutAdmin} className="mt-3 border-t border-white/10 pt-3">
+        <button type="submit" className="w-full rounded-md px-4 py-2 text-left font-sans text-xs uppercase tracking-[0.15em] text-white/40 transition-colors hover:bg-white/[0.04] hover:text-white/85">
+          Sign out
+        </button>
+      </form>
+    </nav>
+  );
+}
